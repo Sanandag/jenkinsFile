@@ -1,0 +1,98 @@
+pipeline {
+    agent { label 'master' }
+    tools {
+        //These names should be same as the names of Global Tool Configuration
+        maven 'Maven3'
+        jdk 'jdk8'
+    }
+    environment {
+        //This credentialId is for Gitlab. You should register authentication info in Jenkins.
+        CREDENTIAL_ID = 'xxxxxxxxxx'
+        MAVEN_OPTS = '-Xmx512m -Xms512m -XX:PermSize=256m'
+        GIT_URL = 'git@gitlab.local'
+    }
+    options {
+        //gitLabConnection name should be same name in Jenkins.
+        gitLabConnection('gitlabserver')
+        gitlabBuilds(builds: ['Merge', 'UnitTest'])
+    }
+    triggers {
+        gitlab(
+            triggerOnPush: false,
+            triggerOnMergeRequest: true,
+            triggerOpenMergeRequestOnPush: 'source',
+            triggerOnClosedMergeRequest: false,
+            addCiMessage: true,
+            triggerOnNoteRequest: true,
+            noteRegex: "rebuild",
+            branchFilterType: 'RegexBasedFilter',
+            targetBranchRegex: "mainbranch1|mainbranch2",
+        )
+    }
+    post {
+        success {
+            junit 'target/surefire-reports/*.xml'
+            updateGitlabCommitStatus name: 'Merge', state: 'success'
+            updateGitlabCommitStatus name: 'UnitTest', state: 'success'
+            cleanWs()
+        }
+        failure {
+            junit 'target/surefire-reports/*.xml'
+            updateGitlabCommitStatus name: 'Merge', state: 'failed'
+            updateGitlabCommitStatus name: 'UnitTest', state: 'failed'
+            cleanWs()
+        }
+    }
+    parameters {
+            string(name: 'targetRepoName', defaultValue: '', description: 'Which git project do you want to build ?')
+            string(name: 'sourceBranch', defaultValue: '', description: 'Which branch do you want build ?')
+            string(name: 'targetBranch', defaultValue: '', description: 'Which branch do you want build ?')
+    }
+    stages {
+      stage('Merge') {
+          steps {
+              script {
+                    if("${params.targetRepoName}" == "") {
+                        env.targetRepoName = "${gitlabTargetRepoName}"
+                        env.sourceBranch = "${gitlabSourceBranch}"
+                        env.targetBranch = "${gitlabTargetBranch}"
+                    } else {
+                        env.targetRepoName = "${params.targetRepoName}"
+                        env.sourceBranch = "${params.sourceBranch}"
+                        env.targetBranch = "${params.targetBranch}"
+                    }
+              }
+              checkout([
+                  $class: 'GitSCM',
+                  branches: [[name: "refs/heads/${env.sourceBranch}"]],
+                  userRemoteConfigs: [[
+                      credentialsId: "${CREDENTIAL_ID}",
+                      url: "${GIT_URL}:root/${env.targetRepoName}.git"
+                  ]],
+                  extensions: [[
+                      $class: 'PreBuildMerge',
+                      options: [
+                          fastForwardMode: 'NO_FF',
+                          mergeRemote: 'origin',
+                          mergeTarget: "${env.targetBranch}"
+                      ]
+                  ],
+                  [
+                      $class: 'LocalBranch',
+                      localBranch: "${params.targetBranch}"
+                  ],
+                  [
+                      $class: 'UserIdentity',
+                      name: 'charagaki',
+                      email: 'charagaki@example.com'
+                  ]]
+              ])
+          }
+      }
+      stage('UnitTest') {
+        steps {
+            sh 'mvn -B clean test -Dunit-test=true -Dfile.encoding=UTF8'
+        }
+      }
+    }
+}
