@@ -6,7 +6,7 @@ pipeline {
    //     jdk "myJava"
     //    maven "myMaven"
     //}
-
+properties([parameters([string(defaultValue: '-Xms512m -Xmx1024m -Xss1024k -XX:MaxPermSize=1024m -Dmaven.test.failure.ignore=false', name: 'MAVEN_OPTS')])])
     stages {
         stage ('Git-Repo'){
             steps{
@@ -22,6 +22,7 @@ pipeline {
                 //sh "mvn -Dmaven.test.failure.ignore=true clean package"
                // sh "mvn -Ddir = /var/lib/jenkins/workspace/SamplePipeline/app_src/cip-partner-api/pom.xml"
                 //sh 'mvn  -f /var/lib/jenkins/workspace/SamplePipeline/app_src/cip-partner-api/pom.xml clean compile'
+		    
                 sh "mvn compile"
 
                 // To run Maven on a Windows agent, use
