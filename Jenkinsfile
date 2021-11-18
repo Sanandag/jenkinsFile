@@ -6,9 +6,12 @@ pipeline {
    //     jdk "myJava"
     //    maven "myMaven"
     //}
-	options{
-		parameters([string(defaultValue: '-Xms512m -Xmx1024m -Xss1024k -XX:MaxPermSize=1024m -Dmaven.test.failure.ignore=false', name: 'MAVEN_OPTS')])
-	}
+	environment {
+        //This credentialId is for Gitlab. You should register authentication info in Jenkins.
+       // CREDENTIAL_ID = 'xxxxxxxxxx'
+        MAVEN_OPTS = '-Xmx512m -Xms512m -XX:PermSize=256m'
+       // GIT_URL = 'git@gitlab.local'
+    }
     stages {
         stage ('Git-Repo'){
             steps{
