@@ -6,7 +6,7 @@ pipeline {
    //     jdk "myJava"
     //    maven "myMaven"
     //}
-properties([parameters([string(defaultValue: '-Xms512m -Xmx1024m -Xss1024k -XX:MaxPermSize=1024m -Dmaven.test.failure.ignore=false', name: 'MAVEN_OPTS')])])
+options([parameters([string(defaultValue: '-Xms512m -Xmx1024m -Xss1024k -XX:MaxPermSize=1024m -Dmaven.test.failure.ignore=false', name: 'MAVEN_OPTS')])])
     stages {
         stage ('Git-Repo'){
             steps{
